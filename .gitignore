@@ -1,0 +1,31 @@
+# Environment Variables & Secrets
+.env
+.env.local
+.env.production
+keys/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[oc]
+*.pyc
+
+# FastAPI & IDEs
+.vscode/
+.idea/
+*.jsonl
+
+# AI/ML Specific
+models/
+data/
+evals/reports/
+logs/
+*.pth
+*.pkl
+
+# Database
+db.sqlite3

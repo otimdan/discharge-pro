@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DischargePro — AI Discharge Summary</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@300;400;500&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#faf9f6;--white:#ffffff;--warm:#f3f0ea;--warm2:#e8e4da;
+  --border:rgba(60,50,30,0.1);--border2:rgba(60,50,30,0.18);
+  --ink:#2c2416;--ink2:#6b5f4a;--ink3:#a0917c;
+  --green:#1a6b40;--green-bg:#eef7f2;--green-border:#b8dfc9;
+  --amber:#7a5500;--amber-bg:#fdf6e3;--amber-border:#e8d08a;
+  --red:#8b1a1a;--red-bg:#fdf0f0;--red-border:#e8b4b4;
+  --blue:#1a4a7a;--blue-bg:#eef3fa;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --mono:'Source Code Pro',monospace;
+  --r:6px;--rl:10px;
+}
+html{-webkit-font-smoothing:antialiased}
+body{background:var(--cream);color:var(--ink);font-family:var(--sans);min-height:100vh}
+
+header{
+  background:var(--ink);color:var(--cream);padding:0 2rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-name{font-family:var(--serif);font-size:18px;font-weight:500;
+  color:var(--cream);letter-spacing:-0.01em}
+.logo-sub{font-size:11px;color:rgba(250,249,246,0.5);font-weight:300}
+.header-actions{display:flex;gap:8px}
+.hdr-btn{font-size:11px;color:rgba(250,249,246,0.7);background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:4px 12px;
+  cursor:pointer;font-family:var(--sans);transition:all .15s}
+.hdr-btn:hover{background:rgba(255,255,255,0.15);color:var(--cream)}
+
+main{max-width:900px;margin:0 auto;padding:2.5rem 1.5rem 6rem}
+
+/* Input section */
+.input-section{animation:up .5s ease both}
+.section-eyebrow{font-family:var(--mono);font-size:10px;color:var(--ink3);
+  letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+h1{font-family:var(--serif);font-size:clamp(24px,4vw,34px);font-weight:500;
+  color:var(--ink);letter-spacing:-0.02em;line-height:1.2;margin-bottom:8px}
+h1 em{font-style:italic;color:var(--green)}
+.intro-text{font-size:14px;color:var(--ink2);line-height:1.7;font-weight:300;
+  margin-bottom:2rem;max-width:600px}
+
+.notes-card{background:var(--white);border:1px solid var(--border);
+  border-radius:var(--rl);overflow:hidden;margin-bottom:1rem}
+.notes-header{background:var(--warm);border-bottom:1px solid var(--border);
+  padding:.7rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
+.notes-header-label{font-family:var(--mono);font-size:10px;color:var(--ink3);
+  letter-spacing:0.08em;text-transform:uppercase}
+.char-count{font-family:var(--mono);font-size:10px;color:var(--ink3)}
+.notes-textarea{width:100%;min-height:200px;padding:1rem;font-family:var(--sans);
+  font-size:13.5px;color:var(--ink);line-height:1.75;border:none;outline:none;
+  resize:vertical;background:var(--white);font-weight:300}
+.notes-textarea::placeholder{color:var(--ink3)}
+
+.input-footer{display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;margin-bottom:1.5rem}
+.example-presets{display:flex;gap:6px;flex-wrap:wrap}
+.preset{font-size:11px;color:var(--ink2);background:var(--warm);
+  border:1px solid var(--border);border-radius:20px;padding:4px 11px;
+  cursor:pointer;font-family:var(--sans);transition:all .12s}
+.preset:hover{background:var(--warm2);border-color:var(--border2)}
+.generate-btn{height:44px;padding:0 28px;background:var(--green);color:white;
+  border:none;border-radius:var(--r);font-family:var(--sans);font-size:14px;
+  font-weight:500;cursor:pointer;transition:all .15s;letter-spacing:0.01em;
+  display:flex;align-items:center;gap:9px}
+.generate-btn:hover{background:#1e7a4a}
+.generate-btn:active{transform:scale(.98)}
+.generate-btn:disabled{background:var(--ink3);cursor:not-allowed;transform:none}
+
+/* Loading */
+.loading{display:none;padding:3rem;text-align:center;
+  background:var(--white);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:1.5rem}
+.loading.show{display:block}
+.loading-dots{display:flex;justify-content:center;gap:6px;margin-bottom:16px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:dotpulse 1.2s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes dotpulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.loading-label{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink2)}
+.loading-sub{font-size:12px;color:var(--ink3);margin-top:4px;font-weight:300}
+
+/* ── DISCHARGE DOCUMENT ─────────────────── */
+.discharge-doc{display:none;animation:up .5s ease both}
+.discharge-doc.show{display:block}
+
+.doc-header{background:var(--ink);color:var(--cream);border-radius:var(--rl) var(--rl) 0 0;
+  padding:1.5rem 1.75rem;margin-bottom:0}
+.doc-facility{font-family:var(--mono);font-size:10px;color:rgba(250,249,246,0.5);
+  letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
+.doc-title{font-family:var(--serif);font-size:22px;font-weight:500;
+  color:var(--cream);letter-spacing:-0.01em;margin-bottom:12px}
+.doc-meta-row{display:flex;gap:24px;flex-wrap:wrap}
+.doc-meta-item{display:flex;flex-direction:column;gap:2px}
+.dm-label{font-size:10px;color:rgba(250,249,246,0.4);text-transform:uppercase;
+  letter-spacing:0.07em;font-family:var(--mono)}
+.dm-value{font-size:13px;color:var(--cream);font-weight:400}
+
+.condition-pill{display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;margin-top:10px}
+.cp-stable{background:rgba(26,107,64,0.25);color:#7de0a8;border:1px solid rgba(125,224,168,0.2)}
+.cp-improved{background:rgba(26,107,64,0.15);color:#a0d8b8;border:1px solid rgba(160,216,184,0.2)}
+.cp-guarded{background:rgba(122,85,0,0.3);color:#f0c858;border:1px solid rgba(240,200,88,0.2)}
+.cp-against-advice{background:rgba(139,26,26,0.3);color:#f08888;border:1px solid rgba(240,136,136,0.2)}
+
+.doc-body{background:var(--white);border:1px solid var(--border);
+  border-top:none;border-radius:0 0 var(--rl) var(--rl);padding:1.75rem;margin-bottom:14px}
+
+.doc-section{margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+.doc-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.doc-section-title{font-family:var(--serif);font-size:13px;font-weight:600;
+  color:var(--ink2);letter-spacing:0.03em;text-transform:uppercase;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.doc-section-title::before{content:'';display:block;width:3px;height:14px;
+  background:var(--green);border-radius:2px;flex-shrink:0}
+
+.course-text{font-size:14px;color:var(--ink);line-height:1.85;font-weight:300}
+.course-text strong{font-weight:500;color:var(--ink)}
+
+.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.result-item{background:var(--warm);border-radius:4px;padding:7px 10px;
+  font-size:12px;color:var(--ink2)}
+.result-item strong{display:block;color:var(--ink);font-weight:500;margin-bottom:1px}
+
+/* Medications table */
+.med-table{width:100%;border-collapse:collapse;font-size:13px}
+.med-table th{text-align:left;padding:6px 10px;background:var(--warm);
+  color:var(--ink2);font-weight:500;font-size:11px;text-transform:uppercase;
+  letter-spacing:0.05em;border-bottom:1px solid var(--border)}
+.med-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--ink);vertical-align:top}
+.med-table tr:last-child td{border-bottom:none}
+.med-name{font-weight:500}
+.edl-chip{font-size:9px;font-weight:500;padding:1px 5px;border-radius:3px;margin-left:5px}
+.edl-y{background:var(--green-bg);color:var(--green)}
+.edl-n{background:var(--warm);color:var(--ink3)}
+.med-indication{font-size:11px;color:var(--ink2);font-style:italic}
+
+/* Follow-up */
+.followup-items{display:flex;flex-direction:column;gap:8px}
+.fu-item{display:flex;gap:12px;align-items:flex-start;
+  padding:10px;background:var(--blue-bg);border-radius:6px}
+.fu-time{font-family:var(--mono);font-size:11px;font-weight:500;
+  color:var(--blue);background:white;border-radius:4px;
+  padding:3px 8px;white-space:nowrap;flex-shrink:0;border:1px solid rgba(26,74,122,0.15)}
+.fu-details{flex:1}
+.fu-appt{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:2px}
+.fu-reason{font-size:12px;color:var(--ink2);font-weight:300}
+
+/* Patient instructions */
+.instruction-list{display:flex;flex-direction:column;gap:8px}
+.instr-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:6px}
+.ii-warning{background:var(--red-bg);border:1px solid var(--red-border)}
+.ii-activity{background:var(--green-bg);border:1px solid var(--green-border)}
+.ii-diet{background:var(--green-bg);border:1px solid var(--green-border)}
+.ii-wound-care{background:var(--amber-bg);border:1px solid var(--amber-border)}
+.ii-medication{background:var(--blue-bg);border:1px solid rgba(26,74,122,0.2)}
+.ii-return{background:var(--warm);border:1px solid var(--border2)}
+.instr-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.instr-cat{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;
+  margin-bottom:2px;font-family:var(--mono)}
+.ic-warning{color:var(--red)}
+.ic-activity,.ic-diet{color:var(--green)}
+.ic-wound-care{color:var(--amber)}
+.ic-medication{color:var(--blue)}
+.ic-return{color:var(--ink2)}
+.instr-text{font-size:13px;line-height:1.6;font-weight:300}
+.ii-warning .instr-text{color:var(--red);font-weight:400}
+
+/* Clinician note */
+.clinician-note{background:var(--amber-bg);border:1px solid var(--amber-border);
+  border-radius:var(--r);padding:.9rem 1.1rem}
+.cn-label{font-size:10px;font-weight:500;color:var(--amber);font-family:var(--mono);
+  letter-spacing:0.07em;text-transform:uppercase;margin-bottom:5px}
+.cn-text{font-size:13px;color:var(--ink2);line-height:1.7;font-weight:300}
+
+.resource-note{font-size:12px;color:var(--ink3);border-top:1px solid var(--border);
+  padding-top:1rem;margin-top:1rem;font-style:italic}
+
+.doc-footer-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.doc-action-btn{flex:1;min-width:120px;height:40px;border-radius:var(--r);
+  font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid var(--border2);background:var(--white);color:var(--ink2)}
+.doc-action-btn:hover{background:var(--warm);color:var(--ink)}
+.doc-action-btn.primary{background:var(--ink);color:var(--cream);border-color:transparent}
+.doc-action-btn.primary:hover{background:#3d3020}
+
+/* Pending investigations */
+.pending-item{display:flex;gap:8px;align-items:flex-start;
+  padding:7px 0;border-bottom:1px solid var(--border)}
+.pending-item:last-child{border-bottom:none}
+.pending-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);
+  flex-shrink:0;margin-top:5px}
+.pending-test{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:1px}
+.pending-reason{font-size:12px;color:var(--ink2);font-weight:300}
+
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+@media print{
+  header,.input-section,.doc-footer-actions{display:none!important}
+  .discharge-doc{display:block!important}
+  body{background:white}
+  .doc-header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  main{padding:0}
+}
+@media(max-width:600px){.doc-meta-row{gap:12px}.results-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-name">DischargePro</span>
+    <span class="logo-sub">AI Clinical Documentation</span>
+  </div>
+  <div class="header-actions">
+    <button class="hdr-btn" onclick="window.print()">Print / Save PDF</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="input-section" id="input-section">
+    <div class="section-eyebrow">AI-assisted documentation</div>
+    <h1>Generate a <em>discharge summary</em><br>from clinical notes</h1>
+    <p class="intro-text">Paste your ward notes, bullet-pointed clinical information, or a brief case description. The AI will produce a complete, structured discharge summary formatted for Uganda's health system.</p>
+
+    <div class="notes-card">
+      <div class="notes-header">
+        <span class="notes-header-label">Clinical notes / case information</span>
+        <span class="char-count" id="char-count">0 characters</span>
+      </div>
+      <textarea class="notes-textarea" id="notes-input"
+        placeholder="Example: 45yo male, admitted 3 days ago with productive cough, fever, SOB. CXR showed right lower lobe consolidation. Sputum AFB x2 negative. Treated with amoxicillin IV for 3 days, good response. Switched to oral today. Afebrile for 24hrs. Sats 97% on air. For discharge on oral amoxicillin. HIV neg. No known allergies..."
+        oninput="updateCount()"></textarea>
+    </div>
+
+    <div class="input-footer">
+      <div class="example-presets">
+        <span style="font-size:11px;color:var(--ink3);align-self:center;margin-right:2px">Examples:</span>
+        <button class="preset" onclick="loadPreset('pneumonia')">Pneumonia</button>
+        <button class="preset" onclick="loadPreset('malaria')">Severe malaria</button>
+        <button class="preset" onclick="loadPreset('tb')">TB start</button>
+        <button class="preset" onclick="loadPreset('delivery')">Post-delivery</button>
+      </div>
+      <button class="generate-btn" id="generate-btn" onclick="generateSummary()">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5h11M8.5 3L13 7.5L8.5 12" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Generate summary
+      </button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="loading-dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="loading-label">Generating discharge summary…</div>
+    <div class="loading-sub" id="loading-sub">Analysing clinical notes</div>
+  </div>
+
+  <!-- DISCHARGE DOCUMENT -->
+  <div class="discharge-doc" id="discharge-doc">
+
+    <div class="doc-header">
+      <div class="doc-facility">Uganda Health Services · Patient Discharge Summary</div>
+      <div class="doc-title">Discharge Summary</div>
+      <div class="doc-meta-row">
+        <div class="doc-meta-item">
+          <span class="dm-label">Patient</span>
+          <span class="dm-value" id="dm-patient">—</span>
+        </div>
+        <div class="doc-meta-item">
+          <span class="dm-label">Admission diagnosis</span>
+          <span class="dm-value" id="dm-admission">—</span>
+        </div>
+        <div class="doc-meta-item">
+          <span class="dm-label">Discharge diagnosis</span>
+          <span class="dm-value" id="dm-discharge">—</span>
+        </div>
+      </div>
+      <div class="condition-pill" id="condition-pill">Stable</div>
+    </div>
+
+    <div class="doc-body">
+
+      <div class="doc-section">
+        <div class="doc-section-title">Clinical course</div>
+        <div class="course-text" id="clinical-course"></div>
+      </div>
+
+      <div class="doc-section" id="results-section">
+        <div class="doc-section-title">Key investigation results</div>
+        <div class="results-grid" id="results-grid"></div>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">Discharge medications</div>
+        <table class="med-table">
+          <thead><tr>
+            <th>Drug</th><th>Dose &amp; route</th><th>Frequency</th><th>Duration</th><th>For</th>
+          </tr></thead>
+          <tbody id="med-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">Follow-up plan</div>
+        <div class="followup-items" id="followup-items"></div>
+      </div>
+
+      <div class="doc-section" id="pending-section">
+        <div class="doc-section-title">Pending investigations</div>
+        <div id="pending-list"></div>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section-title">Instructions for patient</div>
+        <div class="instruction-list" id="instruction-list"></div>
+      </div>
+
+      <div class="clinician-note">
+        <div class="cn-label">Note to receiving clinician</div>
+        <div class="cn-text" id="clinician-note"></div>
+      </div>
+
+      <div class="resource-note" id="resource-note"></div>
+    </div>
+
+    <div class="doc-footer-actions">
+      <button class="doc-action-btn" onclick="copyText()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4" y="4" width="7.5" height="7.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1.5 9V2A1.5 1.5 0 013 .5h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Copy summary
+      </button>
+      <button class="doc-action-btn" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4" width="10" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M3.5 4V2h6v2M3.5 10v1h6v-1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Print / PDF
+      </button>
+      <button class="doc-action-btn primary" onclick="newSummary()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6 1.5C3.5 1.5 1.5 3.5 1.5 6S3.5 10.5 6 10.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/><path d="M11 1.5v3H8" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New patient
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const PRESETS = {
+  pneumonia: `45yo male, admitted 3 days ago. Productive cough x 2 weeks, fever, SOB on exertion. O/E: T 38.8, HR 102, RR 24, Sats 93% on air. CXR: right lower lobe consolidation. Sputum AFB x2 negative. HIV RDT negative. FBC: WBC 14.2, Hb 12.8. Started on IV amoxicillin 1g TID + oxygen. Good response. Afebrile for 24hrs. Sats 97% on air. Switched to oral amoxicillin today. For discharge on oral amoxicillin 500mg TID x 5 days. Allergies: none known.`,
+  malaria: `8yo child, female. Admitted with 2-day fever, vomiting x4, one episode of seizure at home. T 39.8, HR 148, RR 32, Sats 95%, GCS 13/15 (E3V4M6). Pale conjunctivae. Malaria RDT: P.falciparum positive. Hb: 6.8 g/dL. Blood glucose: 3.1 mmol/L (given dextrose). Started on IV artesunate 2.4mg/kg at 0, 12, 24hrs then daily. Blood transfusion 10ml/kg given for anaemia. After 3 days: fully conscious, afebrile, Hb 9.2, tolerating oral feeds. Switched to oral AL (artemether-lumefantrine). Completed 3-day course. Now stable for discharge.`,
+  tb: `28yo male. Referred from health centre with 3-month history of productive cough, haemoptysis x2, weight loss (8kg over 3 months), night sweats. T 37.8, HR 88. Wasted appearance. Sputum GeneXpert: MTB detected, rifampicin sensitive. HIV RDT positive, CD4 pending. CXR: bilateral upper lobe infiltrates with cavitation. Started on first-line TB treatment: RHZE fixed dose combination. Counselled on HIV, enrolled in HIV care, started on cotrimoxazole prophylaxis. To return in 2 weeks for CD4 result and ART initiation planning. Clinically stable for outpatient TB treatment.`,
+  delivery: `24yo female. Admitted in active labour, G2P1. Vaginal delivery of live male infant at 38 weeks, birth weight 3.1kg, Apgar 8 and 9 at 1 and 5 min. Third stage normal, estimated blood loss 250ml. Perineum intact, no episiotomy. Post-delivery BP 118/76, HR 82, Hb 11.4. Uterus firm, lochia normal. Baby breastfeeding well. Mother and baby stable for discharge at 24 hours. FP counselling done, accepted injectable contraceptive. Vitamin A 200,000 IU given. Both mother and baby discharged on iron + folic acid supplementation.`
+};
+
+const LOADING_STEPS = [
+  'Analysing clinical notes…',
+  'Structuring diagnosis and course…',
+  'Generating medication list…',
+  'Writing patient instructions…',
+  'Finalising discharge document…'
+];
+
+let stepIdx = 0, stepTimer = null;
+
+function updateCount() {
+  const len = document.getElementById('notes-input').value.length;
+  document.getElementById('char-count').textContent = `${len} characters`;
+}
+
+function loadPreset(key) {
+  document.getElementById('notes-input').value = PRESETS[key];
+  updateCount();
+}
+
+function generateSummary() {
+  const notes = document.getElementById('notes-input').value.trim();
+  if (!notes || notes.length < 30) {
+    document.getElementById('notes-input').style.outline = '2px solid var(--red)';
+    setTimeout(() => document.getElementById('notes-input').style.outline = '', 1500);
+    return;
+  }
+
+  document.getElementById('generate-btn').disabled = true;
+  document.getElementById('discharge-doc').classList.remove('show');
+  document.getElementById('loading').classList.add('show');
+
+  stepIdx = 0;
+  document.getElementById('loading-sub').textContent = LOADING_STEPS[0];
+  stepTimer = setInterval(() => {
+    stepIdx = (stepIdx + 1) % LOADING_STEPS.length;
+    document.getElementById('loading-sub').textContent = LOADING_STEPS[stepIdx];
+  }, 1400);
+
+  fetch('/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({notes})
+  })
+  .then(async res => {
+    clearInterval(stepTimer);
+    if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.detail||'Error'); return; }
+    const data = await res.json();
+    renderDocument(data);
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('input-section').style.display = 'none';
+    document.getElementById('discharge-doc').classList.add('show');
+  })
+  .catch(() => { clearInterval(stepTimer); alert('Could not reach server.'); })
+  .finally(() => {
+    document.getElementById('generate-btn').disabled = false;
+    document.getElementById('loading').classList.remove('show');
+  });
+}
+
+function renderDocument(d) {
+  document.getElementById('dm-patient').textContent = d.patientSummary;
+  document.getElementById('dm-admission').textContent = d.admissionDiagnosis;
+  document.getElementById('dm-discharge').textContent = d.dischargeDiagnosis;
+  document.getElementById('clinical-course').innerHTML = d.clinicalCourse.replace(/\n/g,'<br>');
+  document.getElementById('clinician-note').textContent = d.clinicianNote;
+  document.getElementById('resource-note').textContent = d.resourceNote;
+
+  // Condition pill
+  const cp = document.getElementById('condition-pill');
+  const cpMap = {
+    stable: {cls:'cp-stable', label:'✓ Stable — fit for discharge'},
+    improved: {cls:'cp-improved', label:'↑ Improved'},
+    guarded: {cls:'cp-guarded', label:'⚠ Guarded — close follow-up needed'},
+    'against-advice': {cls:'cp-against-advice', label:'! Discharged against medical advice'}
+  };
+  const c = cpMap[d.conditionAtDischarge] || cpMap.stable;
+  cp.className = `condition-pill ${c.cls}`;
+  cp.textContent = c.label;
+
+  // Key results
+  const rg = document.getElementById('results-grid');
+  if (d.keyResults && d.keyResults.length > 0) {
+    rg.innerHTML = d.keyResults.map(r => {
+      const parts = r.split(':');
+      const label = parts[0];
+      const val = parts.slice(1).join(':').trim();
+      return `<div class="result-item"><strong>${label}</strong>${val}</div>`;
+    }).join('');
+    document.getElementById('results-section').style.display = '';
+  } else {
+    document.getElementById('results-section').style.display = 'none';
+  }
+
+  // Medications
+  document.getElementById('med-tbody').innerHTML = d.dischargeMedications.length > 0
+    ? d.dischargeMedications.map(m => `
+      <tr>
+        <td><span class="med-name">${m.name}</span>
+          <span class="edl-chip ${m.onUgandaEDL ? 'edl-y':'edl-n'}">${m.onUgandaEDL?'EDL':''}</span>
+          <div class="med-indication">${m.indication}</div></td>
+        <td>${m.dose} ${m.route}</td>
+        <td>${m.frequency}</td>
+        <td>${m.duration}</td>
+        <td style="font-size:11px;color:var(--ink2)">${m.indication}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="color:var(--ink3);font-size:13px">No medications prescribed at discharge</td></tr>';
+
+  // Follow-up
+  document.getElementById('followup-items').innerHTML = d.followUp.map(f => `
+    <div class="fu-item">
+      <span class="fu-time">${f.timeframe}</span>
+      <div class="fu-details">
+        <div class="fu-appt">${f.appointment}</div>
+        <div class="fu-reason">${f.reason}</div>
+      </div>
+    </div>`).join('');
+
+  // Pending investigations
+  const pendEl = document.getElementById('pending-list');
+  if (d.pendingInvestigations && d.pendingInvestigations.length > 0) {
+    pendEl.innerHTML = d.pendingInvestigations.map(p => `
+      <div class="pending-item">
+        <div class="pending-dot"></div>
+        <div><div class="pending-test">${p.test}</div><div class="pending-reason">${p.reason}</div></div>
+      </div>`).join('');
+    document.getElementById('pending-section').style.display = '';
+  } else {
+    document.getElementById('pending-section').style.display = 'none';
+  }
+
+  // Patient instructions
+  const iconMap = {warning:'⚠', activity:'🏃', diet:'🥗', 'wound-care':'🩹', medication:'💊', return:'📅'};
+  document.getElementById('instruction-list').innerHTML = d.patientInstructions.map(i => `
+    <div class="instr-item ii-${i.category}">
+      <span class="instr-icon">${iconMap[i.category]||'•'}</span>
+      <div>
+        <div class="instr-cat ic-${i.category}">${i.category.replace('-',' ')}</div>
+        <div class="instr-text">${i.instruction}</div>
+      </div>
+    </div>`).join('');
+}
+
+function copyText() {
+  const title = document.getElementById('dm-patient').textContent;
+  const course = document.getElementById('clinical-course').innerText;
+  const note = document.getElementById('clinician-note').textContent;
+  navigator.clipboard.writeText(`DISCHARGE SUMMARY\n${title}\n\nCLINICAL COURSE\n${course}\n\nNOTE TO CLINICIAN\n${note}`)
+    .then(() => {
+      const btn = event.target.closest('.doc-action-btn');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied';
+      setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
+
+function newSummary() {
+  document.getElementById('discharge-doc').classList.remove('show');
+  document.getElementById('input-section').style.display = '';
+  document.getElementById('notes-input').value = '';
+  updateCount();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+</script>
+</body>
+</html>
